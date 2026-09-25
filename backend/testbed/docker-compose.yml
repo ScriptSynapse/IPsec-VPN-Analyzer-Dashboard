@@ -1,0 +1,76 @@
+services:
+  alice:
+    build: .
+    container_name: alice
+    hostname: alice
+    cap_add: [NET_ADMIN, NET_RAW]
+    devices: ["/dev/net/tun"]
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv4.conf.all.accept_redirects: 0
+      net.ipv4.conf.all.send_redirects: 0
+    networks:
+      public:
+        ipv4_address: 172.20.0.10
+      alice_lan:
+        ipv4_address: 10.0.1.2
+    volumes:
+      - ./configs/active/ipsec.conf:/etc/ipsec.conf:ro
+      - ./configs/active/ipsec.secrets:/etc/ipsec.secrets:ro
+      - ../data/pcaps:/pcaps
+
+  bob:
+    build: .
+    container_name: bob
+    hostname: bob
+    cap_add: [NET_ADMIN, NET_RAW]
+    devices: ["/dev/net/tun"]
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv4.conf.all.accept_redirects: 0
+      net.ipv4.conf.all.send_redirects: 0
+    networks:
+      public:
+        ipv4_address: 172.20.0.20
+      bob_lan:
+        ipv4_address: 10.0.2.2
+    volumes:
+      - ./configs/active/ipsec.conf:/etc/ipsec.conf:ro
+      - ./configs/active/ipsec.secrets:/etc/ipsec.secrets:ro
+      - ../data/pcaps:/pcaps
+
+  # Simulated LAN hosts either side of the tunnel -- traffic between these two
+  # is what gets ESP-encapsulated by alice/bob and captured for the dataset.
+  alice-host:
+    image: nicolaka/netshoot:latest
+    container_name: alice-host
+    cap_add: [NET_ADMIN]
+    networks:
+      alice_lan:
+        ipv4_address: 10.0.1.10
+    depends_on: [alice]
+    entrypoint: ["sh", "-c", "ip route replace 10.0.2.0/24 via 10.0.1.2 && sleep infinity"]
+
+  bob-host:
+    image: nicolaka/netshoot:latest
+    container_name: bob-host
+    cap_add: [NET_ADMIN]
+    networks:
+      bob_lan:
+        ipv4_address: 10.0.2.10
+    depends_on: [bob]
+    entrypoint: ["sh", "-c", "ip route replace 10.0.1.0/24 via 10.0.2.2 && sleep infinity"]
+
+networks:
+  public:
+    driver: bridge
+    ipam:
+      config: [{subnet: 172.20.0.0/24}]
+  alice_lan:
+    driver: bridge
+    ipam:
+      config: [{subnet: 10.0.1.0/24}]
+  bob_lan:
+    driver: bridge
+    ipam:
+      config: [{subnet: 10.0.2.0/24}]

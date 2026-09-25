@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# app data
+backend/data/app.db
+backend/data/pcaps/*
+!backend/data/pcaps/.gitkeep
+backend/data/datasets/*
+!backend/data/datasets/.gitkeep
+
+# ML artifacts (baseline demo model is checked in separately once trained)
+backend/app/ml/artifacts/*
+!backend/app/ml/artifacts/.gitkeep
+
+# testbed: the active config is generated locally by apply_config.sh
+backend/testbed/configs/active/*
+!backend/testbed/configs/active/.gitkeep
+
+.pytest_cache/
+.DS_Store
